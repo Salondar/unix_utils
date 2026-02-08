@@ -30,18 +30,28 @@ int main(int argc, char **argv) {
 
     if (pflag) {
         for (; *argv != NULL; argv++) {
-            while ((chr = strrchr(*argv, '/')) != NULL) {
-                retval = remove_dir(*argv);
+            size_t len = strlen(*argv);
+            char dst[len + 2];
+            char *path;
+            if (*argv[0] != '/') {
+                dst[0] = '/';
+                dst[1] = '\0';
+                path = strcat(dst, *argv);
+                len  = strlen(path);
+            } else {
+                path = *argv;
+            }
+            
+            if (path[len - 1] == '/') {
+                path[len - 1] = '\0';
+            }
+            while ((chr = strrchr(path, '/')) != NULL) {
+                retval = remove_dir(path);
                 if (retval == -1) {
-                    warn("%s", *argv);
+                    warn("%s", path);
                     status += 1;
                 }
                 *chr = '\0';
-            }
-            retval = remove_dir(*argv);
-            if (retval == -1) {
-                warn("%s", *argv);
-                status += 1;
             }
         }
     } else {
