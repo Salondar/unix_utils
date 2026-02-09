@@ -31,24 +31,14 @@ int main(int argc, char **argv) {
     if (pflag) {
         for (; *argv != NULL; argv++) {
             size_t len = strlen(*argv);
-            char dst[len + 2];
-            char *path;
-            if (*argv[0] != '/') {
-                dst[0] = '/';
-                dst[1] = '\0';
-                path = strcat(dst, *argv);
-                len  = strlen(path);
-            } else {
-                path = *argv;
+            if ((*argv)[len - 1] == '/') {
+                (*argv)[len - 1] = '\0';
             }
-            
-            if (path[len - 1] == '/') {
-                path[len - 1] = '\0';
-            }
-            while ((chr = strrchr(path, '/')) != NULL) {
-                status += remove_dir(path);
+            while ((chr = strrchr(*argv, '/')) != NULL) {
+                status += remove_dir(*argv);
                 *chr = '\0';
             }
+            status += remove_dir(*argv);
         }
     } else {
         for (; *argv != NULL; argv++) {
