@@ -11,7 +11,7 @@ void usage(void);
 int remove_dir(char *path);
 
 int main(int argc, char **argv) {
-    int ch, retval, pflag = 0, status = 0;
+    int ch, pflag = 0, status = 0;
     char *chr;
 
     opterr = 0;
@@ -46,29 +46,27 @@ int main(int argc, char **argv) {
                 path[len - 1] = '\0';
             }
             while ((chr = strrchr(path, '/')) != NULL) {
-                retval = remove_dir(path);
-                if (retval == -1) {
-                    warn("%s", path);
-                    status += 1;
-                }
+                status += remove_dir(path);
                 *chr = '\0';
             }
         }
     } else {
         for (; *argv != NULL; argv++) {
-            retval = remove_dir(*argv);
-            if (retval == -1) {
-                warn("%s", *argv);
-                status += 1;
-            }
+            status += remove_dir(*argv);
         }
     }
     return status;
 }
 
 int remove_dir(char *pathname) {
+    int status = 0;
     errno = 0;
-    return unlinkat(AT_FDCWD, pathname, AT_REMOVEDIR);
+    if (unlinkat(AT_FDCWD, pathname, AT_REMOVEDIR) == -1) {
+        warn("%s", pathname);
+        status = 1;
+    }
+
+    return status;
 }
 
 void usage(void) {
