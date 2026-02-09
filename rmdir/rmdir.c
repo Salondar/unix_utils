@@ -28,6 +28,10 @@ int main(int argc, char **argv) {
     argc -= optind;
     argv += optind;
 
+    if (argc == 0) {
+        usage();
+    }
+    
     if (pflag) {
         for (; *argv != NULL; argv++) {
             size_t len = strlen(*argv);
@@ -60,6 +64,6 @@ int remove_dir(char *pathname) {
 }
 
 void usage(void) {
-    fprintf(stderr, "usage: rmdir [-p] directory...\n");
+    fprintf(stderr, "usage: rmdir [-p] directory ...\n");
     exit(EXIT_FAILURE);
 }
