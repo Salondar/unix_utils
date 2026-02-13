@@ -57,7 +57,7 @@ int remove_dir(char *pathname) {
     errno = 0;
     if (unlinkat(AT_FDCWD, pathname, AT_REMOVEDIR) == -1) {
         warn("%s", pathname);
-        status = 1;
+        return 1;
     }
 
     return status;
