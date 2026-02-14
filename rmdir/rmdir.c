@@ -44,20 +44,20 @@ int main(int argc, char **argv) {
     return status;
 }
 
-int remove_dir(char *pathname) {
+int remove_dir(char *path) {
     int status = 0;
     errno = 0;
 
-    char *p = strchr(pathname, '\0');
+    char *p = strchr(path, '\0');
 
-    while (--p > pathname && *p == '/')
+    while (--p > path && *p == '/')
         continue;
 
-    for (; p > pathname; p--) {
+    for (; p > path; p--) {
         if (p[0] == '/' && p[-1] != '/') {
             *p = '\0';
-            if (unlinkat(AT_FDCWD, pathname, AT_REMOVEDIR) == -1) {
-                warn("%s", pathname);
+            if (unlinkat(AT_FDCWD, path, AT_REMOVEDIR) == -1) {
+                warn("%s", path);
                 return 1;
             }
         }
