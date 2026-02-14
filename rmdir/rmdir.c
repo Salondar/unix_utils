@@ -11,10 +11,10 @@ void usage(void);
 int remove_dir(char *path);
 
 int main(int argc, char **argv) {
-    int ch, pflag = 0, status = 0;
-    char *chr;
+    int ch, pflag, status;
 
     opterr = 0;
+    pflag = 0;
     while ((ch = getopt(argc, argv, "p")) != -1) {
         switch(ch) {
             case 'p':
@@ -32,21 +32,13 @@ int main(int argc, char **argv) {
         usage();
     }
     
-    if (pflag) {
-        for (; *argv != NULL; argv++) {
-            size_t len = strlen(*argv);
-            if ((*argv)[len - 1] == '/') {
-                (*argv)[len - 1] = '\0';
-            }
-            while ((chr = strrchr(*argv, '/')) != NULL) {
-                status += remove_dir(*argv);
-                *chr = '\0';
-            }
-            status += remove_dir(*argv);
-        }
-    } else {
-        for (; *argv != NULL; argv++) {
-            status += remove_dir(*argv);
+    status = 0;
+    for (; *argv != NULL; argv++) {
+        if (unlinkat(AT_FDCWD, *argv, AT_REMOVEDIR) == -1) {
+            warn("%s", *argv);
+            status = 1;
+        } else if (pflag) {
+            status |= remove_dir(*argv);
         }
     }
     return status;
@@ -55,11 +47,21 @@ int main(int argc, char **argv) {
 int remove_dir(char *pathname) {
     int status = 0;
     errno = 0;
-    if (unlinkat(AT_FDCWD, pathname, AT_REMOVEDIR) == -1) {
-        warn("%s", pathname);
-        return 1;
-    }
 
+    char *p = strchr(pathname, '\0');
+
+    while (--p > pathname && *p == '/')
+        continue;
+
+    for (; p > pathname; p--) {
+        if (p[0] == '/' && p[-1] != '/') {
+            *p = '\0';
+            if (unlinkat(AT_FDCWD, pathname, AT_REMOVEDIR) == -1) {
+                warn("%s", pathname);
+                return 1;
+            }
+        }
+    }
     return status;
 }
 
