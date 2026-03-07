@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 void usage(void);
 int add_path(char *path, __mode_t mode);
@@ -31,25 +32,27 @@ int main(int argc, char **argv) {
     }
 
     errors = 0;
-    if (pflag) {
-        for (; *argv != NULL; argv++) {
+    for (; *argv != NULL; argv++) {
+        if (pflag)
             errors |= add_path(*argv, mode);
-        }
-    } else {
-        for (; *argv != NULL; argv++) {
+        else {
             if (mkdir(*argv, mode) == -1) {
                 warn("%s", *argv);
                 errors = 1;
             }
         }
     }
-
+    
     return errors;
 }
 
 int add_path(char *path, __mode_t mode) {
-    char *p;
 
+    char *p = strrchr(path, '\0');
+    int path_not_end_with_slash = 0;
+    if (*(--p) != '/') {
+        path_not_end_with_slash = 1;
+    }
     for (p = path; *p != '\0'; p++) {
         if (p[0] == '/') {
             p[0] = '\0';
@@ -58,6 +61,13 @@ int add_path(char *path, __mode_t mode) {
                 return 1;
             }
             p[0] = '/';
+        }
+    }
+
+    if (path_not_end_with_slash) {
+        if (mkdir(path, mode) == -1) {
+            warn("%s", path);
+            return 1;
         }
     }
 
