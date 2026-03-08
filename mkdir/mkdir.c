@@ -12,16 +12,27 @@ int add_path(char *path, __mode_t mode);
 int main(int argc, char **argv) {
     __mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;
     int ch, errors, pflag;
-
+    char *endptr;
     pflag = 0;
     opterr = 0;
-    while ((ch = getopt(argc, argv, "p")) != -1) {
+    while ((ch = getopt(argc, argv, "pm:")) != -1) {
         switch(ch) {
             case 'p':
                 pflag = 1;
                 break;
             case 'm':
-                mode = 
+                errno = 0;
+                mode = strtol(optarg, &endptr, 8);
+
+                if (optarg == endptr || *endptr != '\0') {
+                    fprintf(stderr, "invalid file mode: %s\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
+
+                if (errno == EINVAL || errno == ERANGE) {
+                    usage();
+                }
+                break;
             default:
                 usage();               
         }
