@@ -20,6 +20,8 @@ int main(int argc, char **argv) {
             case 'p':
                 pflag = 1;
                 break;
+            case 'm':
+                mode = 
             default:
                 usage();               
         }
@@ -33,8 +35,9 @@ int main(int argc, char **argv) {
 
     errors = 0;
     for (; *argv != NULL; argv++) {
-        if (pflag)
+        if (pflag) {
             errors |= add_path(*argv, mode);
+        }
         else {
             if (mkdir(*argv, mode) == -1) {
                 warn("%s", *argv);
@@ -48,29 +51,35 @@ int main(int argc, char **argv) {
 
 int add_path(char *path, __mode_t mode) {
 
+    char *pathname = malloc(1 + strlen(path) * sizeof(char));
+    strcpy(pathname, path);
+
     char *p = strrchr(path, '\0');
-    int path_not_end_with_slash = 0;
-    if (*(--p) != '/') {
-        path_not_end_with_slash = 1;
+    if (*(p - 1) != '\0') {
+        pathname = realloc(pathname, strlen(path) + 2);
+        pathname[strlen(path)] = '/';
+        pathname[strlen(path) + 1] = '\0';
+
     }
-    for (p = path; *p != '\0'; p++) {
+
+    for (p = pathname; *p != '\0'; p++) {
         if (p[0] == '/') {
             p[0] = '\0';
-            if (mkdir(path, mode) == -1) {
-                warn("%s", path);
-                return 1;
+            errno = 0;
+            if (mkdir(pathname, mode) == -1) {
+                if (errno == EEXIST) {
+                    p[0] = '/';
+                    continue;
+                } else {
+                    warn("%s", pathname);
+                    free(pathname);
+                    return 1;
+                }
             }
             p[0] = '/';
         }
     }
-
-    if (path_not_end_with_slash) {
-        if (mkdir(path, mode) == -1) {
-            warn("%s", path);
-            return 1;
-        }
-    }
-
+    free(pathname);
     return 0;
 }
 
