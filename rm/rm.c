@@ -4,11 +4,16 @@
 #include <err.h>
 #include <errno.h>
 #include <getopt.h>
+#include <ctype.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#include <grp.h>
 
 void usage(void);
 
 int main(int argc, char **argv) {
     int ch, vflag, dflag, iflag, errors;
+    
     
     dflag = 0;
     vflag = 0;
@@ -37,6 +42,7 @@ int main(int argc, char **argv) {
     }
 
     errors = 0;
+   
     for (; *argv != NULL; argv++) {
         errno = 0;
 
@@ -46,19 +52,50 @@ int main(int argc, char **argv) {
                 errors = 1;
             }
         }
-        else if (iflag) {
-            printf("remove: %s ", *argv);
+        if (iflag) {
+            printf("remove %s: ", *argv);
             if ((ch = getchar()) == 'y') {
                 if ((unlink(*argv) == -1)) {
                     warn("%s", *argv);
                     errors = 1;
                 }
             }
+            while ((ch = getchar()) != '\n' && ch != EOF);
         }
-        else if (vflag) {
+        if (vflag) {
             printf("%s\n", *argv); 
         }
         else  {
+            struct stat statbuf;
+            __mode_t mode;
+            stat(*argv, &statbuf);
+            struct passwd *pw = getpwuid(statbuf.st_uid);
+            struct group *gr = getgrgid(statbuf.st_gid);
+            mode = statbuf.st_mode;
+
+            if (!(mode & S_IWUSR)) {
+                printf("override %c", mode & S_IRUSR ? 'r' : '-');
+                printf("%c", mode & S_IWUSR ? 'w' : '-');
+                printf("%c", mode & S_IXUSR ? 'x' : '-');
+
+                printf("%c", mode & S_IRGRP ? 'r' : '-');
+                printf("%c", mode & S_IWGRP ? 'w' : '-');
+                printf("%c", mode & S_IXGRP ? 'x' : '-');
+
+                printf("%c", mode & S_IROTH ? 'r' : '-');
+                printf("%c", mode & S_IWOTH ? 'w' : '-');
+                printf("%c", mode & S_IXOTH ? 'x' : '-');
+
+                printf(" %s/%s for %s? ", pw->pw_name, gr->gr_name, *argv);
+
+                if ((ch = getchar()) == 'y') {
+                    if ((unlink(*argv) == -1)) {
+                        warn("%s", *argv);
+                        errors = 1;
+                    }
+                }
+                while ((ch = getchar()) != '\n' && ch != EOF);
+            }
             if ((unlink(*argv) == -1)) {
                 warn("%s", *argv);
                 errors = 1;
