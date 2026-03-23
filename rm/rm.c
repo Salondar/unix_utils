@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
             printf("%s\n", *argv); 
         }
         else  {
+            int notwrite = 0;
             struct stat statbuf;
             __mode_t mode;
             stat(*argv, &statbuf);
@@ -73,7 +74,7 @@ int main(int argc, char **argv) {
             struct group *gr = getgrgid(statbuf.st_gid);
             mode = statbuf.st_mode;
 
-            if (!(mode & S_IWUSR)) {
+            if (!(mode & S_IWUSR) && isatty(fileno(stdin))) {
                 printf("override %c", mode & S_IRUSR ? 'r' : '-');
                 printf("%c", mode & S_IWUSR ? 'w' : '-');
                 printf("%c", mode & S_IXUSR ? 'x' : '-');
@@ -95,11 +96,15 @@ int main(int argc, char **argv) {
                     }
                 }
                 while ((ch = getchar()) != '\n' && ch != EOF);
+                notwrite = 1;
             }
-            if ((unlink(*argv) == -1)) {
-                warn("%s", *argv);
-                errors = 1;
+            if (notwrite) {
+                if ((unlink(*argv) == -1)) {
+                    warn("%s", *argv);
+                    errors = 1;
+                }       
             }
+          
         }
     }
     return errors;
