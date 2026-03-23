@@ -12,22 +12,34 @@
 void usage(void);
 
 int main(int argc, char **argv) {
-    int ch, vflag, dflag, iflag, errors;
+    int ch, vflag, dflag, iflag, fflag, rflag, errors;
     
     
     dflag = 0;
     vflag = 0;
     iflag = 0;
-    while((ch = getopt(argc, argv, "div")) != -1) {
+    fflag = 0;
+    rflag = 0;
+
+    while((ch = getopt(argc, argv, "dfiRrv")) != -1) {
         switch(ch) {
-            case 'v':
-                vflag = 1;
-                break;
             case 'd':
                 dflag = 1;
                 break;
+            case 'f':
+                fflag = 1;
+                iflag = 0;
+                break;
             case 'i':
                 iflag = 1;
+                fflag = 0;
+                break;
+            case 'R':
+            case 'r':
+                rflag = 1;
+                break;
+            case 'v':
+                vflag = 1;
                 break;
             default:
                 usage();
@@ -65,8 +77,11 @@ int main(int argc, char **argv) {
         if (vflag) {
             printf("%s\n", *argv); 
         }
+        if (fflag) {
+            unlink(*argv);
+        }
         else  {
-            int notwrite = 0;
+            int notwrite = 1;
             struct stat statbuf;
             __mode_t mode;
             stat(*argv, &statbuf);
@@ -96,7 +111,7 @@ int main(int argc, char **argv) {
                     }
                 }
                 while ((ch = getchar()) != '\n' && ch != EOF);
-                notwrite = 1;
+                notwrite = 0;
             }
             if (notwrite) {
                 if ((unlink(*argv) == -1)) {
