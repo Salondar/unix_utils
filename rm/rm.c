@@ -6,10 +6,15 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <pwd.h>
 #include <grp.h>
+#include <dirent.h>
+#include <linux/limits.h>
+#include <string.h>
 
 void usage(void);
+void delete_folder(char *path);
 
 int main(int argc, char **argv) {
     int ch, vflag, dflag, iflag, fflag, rflag, errors;
@@ -80,6 +85,19 @@ int main(int argc, char **argv) {
         if (fflag) {
             unlink(*argv);
         }
+        if (rflag) {
+            struct stat st;
+            stat(*argv, &st);
+            if (S_ISDIR(st.st_mode)) {
+                delete_folder(*argv);
+            } else {
+                errno = 0;
+                if (unlink(*argv) == -1) {
+                    warn("%s", *argv);
+                    errors = 1;
+                }
+            }
+        }
         else  {
             int notwrite = 1;
             struct stat statbuf;
@@ -123,6 +141,30 @@ int main(int argc, char **argv) {
         }
     }
     return errors;
+}
+
+void delete_folder(char *path) {
+    struct stat st;
+    DIR *directory;
+    struct dirent *entry;
+    char filepath[PATH_MAX];
+    directory = opendir(path);
+
+    while ((entry = readdir(directory)) != NULL) {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            strcpy(filepath, path);
+            strcat(filepath, "/");
+            strcat(filepath, entry->d_name);
+            stat(filepath, &st);
+            if (S_ISDIR(st.st_mode)) {
+                delete_folder(filepath);
+            } else {
+                unlink(filepath);
+            } 
+        }
+      
+    }
+    rmdir(path);
 }
 
 void usage(void) {
