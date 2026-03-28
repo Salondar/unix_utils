@@ -13,11 +13,15 @@
 #include <linux/limits.h>
 #include <string.h>
 
+int rv = 0;
+
 void usage(void);
 void delete_folder(char *path);
+void delete_file(char *path);
 
 int main(int argc, char **argv) {
-    int ch, vflag, dflag, iflag, fflag, rflag, errors;
+    int ch, vflag, dflag, iflag, fflag, rflag, pflag;
+    struct stat st;
     
     
     dflag = 0;
@@ -25,8 +29,8 @@ int main(int argc, char **argv) {
     iflag = 0;
     fflag = 0;
     rflag = 0;
-
-    while((ch = getopt(argc, argv, "dfiRrv")) != -1) {
+    pflag = 0;
+    while((ch = getopt(argc, argv, "dfiPRrv")) != -1) {
         switch(ch) {
             case 'd':
                 dflag = 1;
@@ -38,6 +42,9 @@ int main(int argc, char **argv) {
             case 'i':
                 iflag = 1;
                 fflag = 0;
+                break;
+            case 'P':
+                pflag = 1;
                 break;
             case 'R':
             case 'r':
@@ -57,8 +64,6 @@ int main(int argc, char **argv) {
     if (argc == 0) {
         usage();
     }
-
-    errors = 0;
    
     for (; *argv != NULL; argv++) {
         errno = 0;
@@ -66,46 +71,50 @@ int main(int argc, char **argv) {
         if (dflag) {
             if (rmdir(*argv) == -1) {
                 warn("%s", *argv);
-                errors = 1;
+                rv = 1;
             }
         }
         if (iflag) {
             printf("remove %s: ", *argv);
             if ((ch = getchar()) == 'y') {
-                if ((unlink(*argv) == -1)) {
-                    warn("%s", *argv);
-                    errors = 1;
-                }
+                delete_file(*argv);
             }
             while ((ch = getchar()) != '\n' && ch != EOF);
         }
         if (vflag) {
             printf("%s\n", *argv); 
         }
+
+        if (pflag) {
+            FILE *fp = fopen(*argv, "r+");
+            fseek(fp, 0L, SEEK_END);
+            long filesize = ftell(fp);
+            fseek(fp, 0L, SEEK_SET);
+            char buffer[filesize];
+            arc4random_buf(buffer, filesize);
+            fwrite(buffer, sizeof(char), filesize, fp);
+            fclose(fp);
+            delete_file(*argv);
+        }
+
         if (fflag) {
             unlink(*argv);
         }
         if (rflag) {
-            struct stat st;
             stat(*argv, &st);
             if (S_ISDIR(st.st_mode)) {
                 delete_folder(*argv);
             } else {
-                errno = 0;
-                if (unlink(*argv) == -1) {
-                    warn("%s", *argv);
-                    errors = 1;
-                }
+                delete_file(*argv);
             }
         }
-        else  {
+        if (!(rflag | dflag | fflag | iflag | vflag | pflag))  {
             int notwrite = 1;
-            struct stat statbuf;
             __mode_t mode;
-            stat(*argv, &statbuf);
-            struct passwd *pw = getpwuid(statbuf.st_uid);
-            struct group *gr = getgrgid(statbuf.st_gid);
-            mode = statbuf.st_mode;
+            stat(*argv, &st);
+            struct passwd *pw = getpwuid(st.st_uid);
+            struct group *gr = getgrgid(st.st_gid);
+            mode = st.st_mode;
 
             if (!(mode & S_IWUSR) && isatty(fileno(stdin))) {
                 printf("override %c", mode & S_IRUSR ? 'r' : '-');
@@ -123,24 +132,26 @@ int main(int argc, char **argv) {
                 printf(" %s/%s for %s? ", pw->pw_name, gr->gr_name, *argv);
 
                 if ((ch = getchar()) == 'y') {
-                    if ((unlink(*argv) == -1)) {
-                        warn("%s", *argv);
-                        errors = 1;
-                    }
+                    delete_file(*argv);
                 }
                 while ((ch = getchar()) != '\n' && ch != EOF);
                 notwrite = 0;
             }
             if (notwrite) {
-                if ((unlink(*argv) == -1)) {
-                    warn("%s", *argv);
-                    errors = 1;
-                }       
+                delete_file(*argv);       
             }
           
         }
     }
-    return errors;
+    return rv;
+}
+
+void delete_file(char *path) {
+    errno = 0;
+    if (unlink(path) == -1) {
+        warn("%s", path);
+        rv = 0;
+    }
 }
 
 void delete_folder(char *path) {
@@ -159,7 +170,7 @@ void delete_folder(char *path) {
             if (S_ISDIR(st.st_mode)) {
                 delete_folder(filepath);
             } else {
-                unlink(filepath);
+                delete_file(filepath);
             } 
         }
       
