@@ -82,17 +82,19 @@ int main(int argc, char **argv) {
             while ((ch = getchar()) != '\n' && ch != EOF);
         }
         if (vflag) {
-            printf("%s\n", *argv); 
+            printf("%s\n", *argv);
+            delete_file(*argv); 
         }
 
         if (pflag) {
             FILE *fp = fopen(*argv, "r+");
-            fseek(fp, 0L, SEEK_END);
-            long filesize = ftell(fp);
-            fseek(fp, 0L, SEEK_SET);
-            char buffer[filesize];
-            arc4random_buf(buffer, filesize);
-            fwrite(buffer, sizeof(char), filesize, fp);
+
+            if (!fp) {
+                fprintf(stderr, "Could not open file\n");
+            }
+            while((ch = fgetc(fp)) != EOF) {
+                fputc(arc4random(), fp);
+            }
             fclose(fp);
             delete_file(*argv);
         }
@@ -163,9 +165,7 @@ void delete_folder(char *path) {
 
     while ((entry = readdir(directory)) != NULL) {
         if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-            strcpy(filepath, path);
-            strcat(filepath, "/");
-            strcat(filepath, entry->d_name);
+            snprintf(filepath, PATH_MAX, "%s/%s", path, entry->d_name);
             stat(filepath, &st);
             if (S_ISDIR(st.st_mode)) {
                 delete_folder(filepath);
