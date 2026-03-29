@@ -150,7 +150,7 @@ void delete_file(char *path) {
     errno = 0;
     if (unlink(path) == -1) {
         warn("%s", path);
-        rv = 0;
+        rv = 1;
     }
 }
 
